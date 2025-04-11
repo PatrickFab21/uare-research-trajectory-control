@@ -156,7 +156,7 @@ To run each controller, open a new terminal (with your ROS 2 environment sourced
 The `Matlab Codes/` folder contains energy-efficient trajectory optimization algorithms developed during the research phase. These include:
 
 ### 🔍 Circular Trajectory Optimization
-**File**: [Circular Trajectory Optimization Matlab](Matlab Codes/UAV_3D_minEnergy_plusMinVelPeriod.m)
+**File**: [Circular Trajectory Optimization Matlab](Matlab_Codes/UAV_3D_minEnergy_plusMinVelPeriod.m)
 
 This script implements a **primal-dual method** to minimize the energy consumption of a rotary-wing UAV flying on a circular path, under multiple constraints:
 

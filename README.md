@@ -54,85 +54,100 @@ source install/setup.bash
 
 ## 🧪 Usage
 
-To launch the simulation with your custom controller:
+### Launch the Drone Simulation
 
 ```bash
 ros2 launch sjtu_drone_bringup sjtu_drone_bringup.launch.py
 ```
 
-### Takeoff:
-```bash
-ros2 topic pub /simple_drone/takeoff std_msgs/msg/Empty '{}' --once
-```
+### Basic Commands
 
-### Land:
-```bash
-ros2 topic pub /simple_drone/land std_msgs/msg/Empty '{}' --once
-```
+- **Takeoff**:
+  ```bash
+  ros2 topic pub /simple_drone/takeoff std_msgs/msg/Empty '{}' --once
+  ```
+
+- **Land**:
+  ```bash
+  ros2 topic pub /simple_drone/land std_msgs/msg/Empty '{}' --once
+  ```
 
 ---
 
 ## 📊 Implemented Controllers
 
-All control nodes are located in the folder: `sjtu_drone_control/sjtu_drone_control/`
+All controller scripts are located under: `sjtu_drone_control/sjtu_drone_control/`
 
-### `altitude_controller.py` — Altitude Control
-This node controls the drone's vertical position using a PID controller.
+To run each controller, open a new terminal (with your ROS 2 environment sourced) and execute the corresponding `ros2 run` command.
 
-- 📍 Path: `sjtu_drone_control/sjtu_drone_control/altitude_controller.py`
-- 📐 Parameters:
-  - `target_altitude` (float, default: 10.0): desired flight altitude in meters.
-- 🧠 It regulates vertical velocity `v_z` to reach and maintain `target_altitude`.
+### 1. Altitude Control
+**File**: `altitude_controller.py`
 
----
+- **Basic Run**:
+  ```bash
+  ros2 run sjtu_drone_control altitude_controller
+  ```
+- **Run with Custom Parameter** (e.g., setting altitude to 15m):
+  ```bash
+  ros2 run sjtu_drone_control altitude_controller --ros-args -p target_altitude:=15.0
+  ```
+  This node keeps the drone at a desired altitude.
 
-### `point_to_achieve_v1.py` — 3D Target PID Navigation
-This node moves the UAV to a specific 3D target position using PID control over yaw, altitude, and distance.
+### 2. 3D Target PID Navigation
+**File**: `point_to_achieve_v1.py`
 
-- 📍 Path: `sjtu_drone_control/sjtu_drone_control/point_to_achieve_v1.py`
-- 📐 Parameters:
-  - Target position: `x`, `y`, `z`
-  - PID gains: `k_yaw`, `k_dist`, `k_z`
-  - Max velocities: `v_max`, `w_max`
-  - Tolerances: `epsilon_yaw`, `epsilon_dist`
-- 🧠 It aligns yaw before advancing, using real-time odometry from `/simple_drone/odom`.
+- **Basic Run**:
+  ```bash
+  ros2 run sjtu_drone_control point_to_achieve_v1
+  ```
+- **Run with Custom Parameters** (e.g., target (35,20,25)):
+  ```bash
+  ros2 run sjtu_drone_control point_to_achieve_v1 --ros-args \
+    -p target_x:=35.0 -p target_y:=20.0 -p target_z:=25.0
+  ```
+  This node guides the drone to a specified 3D target position.
 
----
+### 3. Circular Trajectory PID
+**File**: `circular_trajectory_PID_v2.py`
 
-### `circular_trajectory_PID_v2.py` — Circular Trajectory Tracking
-Tracks a circular path by transitioning between approach and follow phases using PD control.
+- **Basic Run**:
+  ```bash
+  ros2 run sjtu_drone_control circular_trajectory_PID_v2
+  ```
+- **Run with Custom Parameters**:
+  ```bash
+  ros2 run sjtu_drone_control circular_trajectory_PID_v2 --ros-args \
+    -p approach_velocity:=10.0 \
+    -p circle_velocity:=5.817 \
+    -p circle_radius:=12.036
+  ```
+  This node tracks a circular path using a two-phase approach.
 
-- 📍 Path: `sjtu_drone_control/sjtu_drone_control/circular_trajectory_PID_v2.py`
-- 📐 Parameters:
-  - Circle center: `X_C`, `Y_C`
-  - Radius `R`, altitude `Z_D`
-  - Gains: `K_p_xy`, `K_d_xy`, `K_p_z`, `K_d_z`
-  - Tolerances: `epsilon_approach`, `epsilon_z`
-- 🧠 After reaching the circle perimeter, the drone transitions to smooth angular motion along the path.
+### 4. Polygonal Waypoint Navigation
+**File**: `points_to_achieve_v1.py`
 
----
+- **Basic Run**:
+  ```bash
+  ros2 run sjtu_drone_control points_to_achieve_v1
+  ```
+- **Select a Polygon** (e.g., 4 vertices):
+  ```bash
+  ros2 run sjtu_drone_control points_to_achieve_v1 --ros-args -p num_vertices:=4
+  ```
+  This node follows a list of waypoints forming a polygon (3 to 7 vertices).
 
-### `points_to_achieve_v1.py` — Polygonal Waypoint Navigation
-Controls the UAV along a polygon (triangle, square, etc.) using sequential waypoint tracking.
+### 5. Smooth Polygonal Navigation
+**File**: `points_to_achieve_v3_smooth.py`
 
-- 📍 Path: `sjtu_drone_control/sjtu_drone_control/points_to_achieve_v1.py`
-- 📐 Parameters:
-  - `num_vertices` (int)
-  - Gains: `k_psi`, `k_d`, `k_z`
-  - Max velocities and waypoint threshold
-- 🧠 Switches to the next waypoint once the UAV reaches the current target.
-
----
-
-### `points_to_achieve_v3_smooth.py` — Smooth Polygonal Navigation
-Enhances polygonal navigation with smoothed corner transitions using a radius-based switch.
-
-- 📍 Path: `sjtu_drone_control/sjtu_drone_control/points_to_achieve_v3_smooth.py`
-- 📐 Parameters:
-  - `num_vertices`, `corner_radius`
-  - Gains: `k_psi`, `k_d`, `k_z`
-  - Velocity and angular rate limits
-- 🧠 Preemptively switches to the next waypoint within a corner radius for smooth motion.
+- **Basic Run**:
+  ```bash
+  ros2 run sjtu_drone_control points_to_achieve_v3_smooth
+  ```
+- **Select a Polygon** (e.g., 5 vertices):
+  ```bash
+  ros2 run sjtu_drone_control points_to_achieve_v3_smooth --ros-args -p num_vertices:=5
+  ```
+  This node ensures smooth corner transitions along polygonal paths.
 
 ---
 

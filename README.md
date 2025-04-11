@@ -69,17 +69,3 @@ Land:
 ros2 topic pub /drone/land std_msgs/msg/Empty '{}' --once
 ```
 
----
-
-## 🙏 Acknowledgements
-
-This project makes extensive use of the [`sjtu_drone`](https://github.com/NovoG93/sjtu_drone) simulator developed by [NovoG93](https://github.com/NovoG93) and contributors from Shanghai Jiao Tong University.\
-We sincerely thank the authors for their work and for releasing it under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html), which made this research possible.
-
----
-
-## 📄 License
-
-This repository is distributed under the **GNU General Public License v3.0 (GPL-3.0)**.\
-See the [LICENSE](LICENSE) file for more information.
-

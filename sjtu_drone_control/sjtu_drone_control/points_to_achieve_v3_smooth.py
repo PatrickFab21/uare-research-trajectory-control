@@ -9,7 +9,7 @@ import math
 
 def quaternion_to_euler(qx, qy, qz, qw):
     """
-    Convierte cuaternión a ángulos de Euler (roll, pitch, yaw).
+    Converts quaternion to Euler angles (roll, pitch, yaw).
     """
     sinr_cosp = 2.0 * (qw * qx + qy * qz)
     cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
@@ -30,11 +30,11 @@ class GoToWaypointListController(Node):
     def __init__(self):
         super().__init__('go_to_waypoint_list_controller')
 
-        # Parámetro numérico para elegir la figura
-        self.declare_parameter('num_vertices', 6)  # por defecto, hexágono
+        # Numeric parameter to select the shape
+        self.declare_parameter('num_vertices', 6)  # default is hexagon
         self.num_vertices = self.get_parameter('num_vertices').get_parameter_value().integer_value
 
-        # Definir waypoints según número de vértices
+        # Define waypoints based on the number of vertices
         if self.num_vertices == 3:
             self.waypoints = [
                 (28.10, 0.31, 10.0),
@@ -76,60 +76,60 @@ class GoToWaypointListController(Node):
                 (16.98, -21.40, 10.0)
             ]
         else:
-            self.get_logger().error("Número de vértices no válido (3-7).")
+            self.get_logger().error("Invalid number of vertices (3-7).")
             self.waypoints = []
 
-        self.get_logger().info(f'Figura con {self.num_vertices} vértices seleccionada: {self.waypoints}')
+        self.get_logger().info(f'Selected shape with {self.num_vertices} vertices: {self.waypoints}')
 
-        # Índice del waypoint actual
+        # Current waypoint index
         self.current_waypoint_idx = 0
 
         # ---------------------------------------------
-        # 1) Ganancias del controlador (PID sencillo)
+        # 1) Controller gains (simple PID)
         # ---------------------------------------------
-        self.k_yaw = 1.0   # Ganancia P para yaw
-        self.k_xy  = 0.5   # Ganancia P para avanzar en XY
-        self.k_z   = 0.5   # Ganancia P para altura
+        self.k_yaw = 1.0   # P gain for yaw
+        self.k_xy  = 0.5   # P gain for XY movement
+        self.k_z   = 0.5   # P gain for altitude
 
         # ---------------------------------------------
-        # 2) Ajustes de saturación
+        # 2) Saturation limits
         # ---------------------------------------------
         self.max_vx = 5.0
         self.max_vz = 1.0
         self.max_wz = 1.5
 
         # ---------------------------------------------
-        # 3) Umbrales
+        # 3) Thresholds
         # ---------------------------------------------
-        # Radio en el cual consideramos "ya pasamos la esquina"
-        self.corner_radius = 5.0  # metros
-        # Se elimina la lógica yaw_threshold que frenaba cuando yaw_error es grande
+        # Radius to consider "corner reached"
+        self.corner_radius = 5.0  # meters
+        # Removed yaw_threshold logic that stopped when yaw_error was large
 
         # ---------------------------------------------
-        # Creación de Publishers y Subscriber
+        # Publishers and Subscriber creation
         # ---------------------------------------------
         self.cmd_vel_pub = self.create_publisher(Twist, '/simple_drone/cmd_vel', 10)
         self.takeoff_pub = self.create_publisher(Empty, '/simple_drone/takeoff', 10)
 
         self.odom_sub = self.create_subscription(Odometry, '/simple_drone/odom', self.odom_callback, 10)
 
-        # Variables internas
+        # Internal variables
         self.x = 0.0
         self.y = 0.0
         self.z = 0.0
         self.yaw = 0.0
         self.has_taken_off = False
 
-        # Timer de control (10 Hz)
+        # Control timer (10 Hz)
         self.timer_period = 0.1
         self.control_timer = self.create_timer(self.timer_period, self.control_loop)
 
-        self.get_logger().info('Nodo [go_to_waypoint_list_controller] iniciado.')
+        self.get_logger().info('Node [go_to_waypoint_list_controller] started.')
 
     def odom_callback(self, msg: Odometry):
         """
-        Lee la posición y orientación actual del dron desde la odometría.
-        Actualiza x, y, z, yaw en variables internas.
+        Reads the drone's current position and orientation from odometry.
+        Updates x, y, z, yaw in internal variables.
         """
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
@@ -144,81 +144,80 @@ class GoToWaypointListController(Node):
 
     def control_loop(self):
         """
-        Control PID sencillo para seguir waypoints sin detenerse en esquinas.
-        1) Despegue automático (1 sola vez).
-        2) Error XY, Z, Yaw => comandos lineales/angulares saturados.
-        3) Saltar al siguiente waypoint si distXY < corner_radius => giros suaves.
+        Simple PID control to follow waypoints without stopping at corners.
+        1) Automatic takeoff (only once).
+        2) XY, Z, Yaw errors => saturated linear/angular commands.
+        3) Skip to the next waypoint if distXY < corner_radius => smooth turns.
         """
-        # 1) Despegue
+        # 1) Takeoff
         if not self.has_taken_off or self.z < 0.5:
-            self.get_logger().info("Enviando comando de despegue...")
+            self.get_logger().info("Sending takeoff command...")
             self.takeoff_pub.publish(Empty())
             self.has_taken_off = True
             return
 
-        # Si no hay waypoints
+        # If no waypoints are defined
         if not self.waypoints:
-            self.get_logger().warn("No hay waypoints definidos.")
+            self.get_logger().warn("No waypoints defined.")
             return
 
-        # 2) Waypoint actual
+        # 2) Current waypoint
         target_idx = self.current_waypoint_idx
         target_x, target_y, target_z = self.waypoints[target_idx]
 
-        # 3) Calcular error
+        # 3) Calculate error
         dx = target_x - self.x
         dy = target_y - self.y
         dz = target_z - self.z
 
         dist_xy = math.hypot(dx, dy)
-        # Nota: Podrías usar dist_3d si lo prefieres
+        # Note: You could use dist_3d if preferred
         # dist_3d = math.sqrt(dx*dx + dy*dy + dz*dz)
 
         desired_yaw = math.atan2(dy, dx)
         yaw_error = desired_yaw - self.yaw
-        # normalizar a [-pi, pi]
+        # Normalize to [-pi, pi]
         yaw_error = math.atan2(math.sin(yaw_error), math.cos(yaw_error))
 
         # 4) Control
         cmd = Twist()
 
-        # 4.1 - Ajuste de yaw
+        # 4.1 - Yaw adjustment
         wz = self.k_yaw * yaw_error
         wz = max(-self.max_wz, min(self.max_wz, wz))
         cmd.angular.z = wz
 
-        # 4.2 - Ajuste de altura
+        # 4.2 - Altitude adjustment
         vz = self.k_z * dz
         vz = max(-self.max_vz, min(self.max_vz, vz))
         cmd.linear.z = vz
 
-        # 4.3 - Ajuste de velocidad en XY
-        #     Antes se ponía vx=0 si yaw_error>threshold.
-        #     Ahora siempre avanza => no se detiene en giros.
+        # 4.3 - XY velocity adjustment
+        #     Previously, vx=0 if yaw_error>threshold.
+        #     Now it always moves forward => no stopping at turns.
         vx = self.k_xy * dist_xy
-        vx = max(0.0, min(self.max_vx, vx))  # no invertimos => solo avance
+        vx = max(0.0, min(self.max_vx, vx))  # no reverse => only forward
         cmd.linear.x = vx
         cmd.linear.y = 0.0
 
-        # 5) Comprobamos si "ya pasamos" el waypoint (esquina),
-        #    usando corner_radius en XY => no se acerca a 0 m,
-        #    sino que cambia de waypoint a 10 m.
+        # 5) Check if "corner reached" using corner_radius in XY
+        #    => does not approach 0 m, switches waypoint at 10 m.
         if dist_xy < self.corner_radius:
-            # Pasar al siguiente waypoint
+            # Move to the next waypoint
             self.get_logger().info(
-                f"Se alcanza zona de giro del waypoint {target_idx+1} (dist_xy={dist_xy:.2f} < {self.corner_radius}m). "
-                "Pasando al siguiente..."
+                f"Reached corner zone of waypoint {target_idx+1} (dist_xy={dist_xy:.2f} < {self.corner_radius}m). "
+                "Switching to the next..."
             )
             self.current_waypoint_idx = (self.current_waypoint_idx + 1) % len(self.waypoints)
         else:
-            # Opcional: Imprimir info
+            # Optional: Print info
             self.get_logger().info(
                 f"Pose=({self.x:.1f}, {self.y:.1f}, {self.z:.1f}), "
                 f"YawErr={math.degrees(yaw_error):.1f} deg, "
                 f"distXY={dist_xy:.2f}, -> vx={vx:.2f}, vz={vz:.2f}, wz={wz:.2f}"
             )
 
-        # 6) Publicar
+        # 6) Publish
         self.cmd_vel_pub.publish(cmd)
 
 def main(args=None):

@@ -1,69 +1,69 @@
 function UAV_3D_minEnergy_PathLossDominant()
 % UAV_3D_minEnergy_PathLossDominant:
 %
-%  Este código primal-dual está configurado para que la restricción
-%  de PATH-LOSS sea, con alta probabilidad, la dominadora.
+%  This primal-dual code is configured so that the PATH-LOSS constraint
+%  becomes the dominant one with high probability.
 %
-%  (1) Calcula c0 según eq.(38a)
-%  (2) Restricción beamwidth => (R+Rc)<= H tan(phi), 
-%  (3) Restricción v >= v_min => con v_min~0,
-%  (4) Permite H muy grande para no saturar la altitud,
-%  (5) Permite T_p muy libre (T_p_min=1 p.ej.)
+%  (1) Computes c0 as in eq.(38a)
+%  (2) Beamwidth constraint => (R+Rc) <= H tan(phi)
+%  (3) Velocity constraint v >= v_min => with v_min~0
+%  (4) Allows large H to avoid altitude saturation
+%  (5) Allows flexible T_p (e.g., T_p_min = 1)
 %
-%  De esa forma, cambiando el environment ("SU","UB","DU","HU")
-%  cambiarás => B,C,etaLoS,etaNLoS => la cota de path-loss => distintos
-%  resultados en R*,H*,T_p*.
+%  Changing the environment ("SU", "UB", "DU", "HU")
+%  modifies => B,C,etaLoS,etaNLoS => path-loss threshold => different
+%  results for R*, H*, T_p*.
 %
 % ---------------------------------------------------------------------
-% Uso:
-%    1) Ajusta "environment" (p.e. "SU","UB","DU","HU") 
-%    2) Cambia path-loss dB si deseas
-%    3) Ejecuta:
+% Usage:
+%    1) Set "environment" (e.g., "SU","UB","DU","HU") 
+%    2) Change path-loss dB if desired
+%    3) Run:
 %         >> UAV_3D_minEnergy_PathLossDominant
 %
-%    Verás que la constraint de path-loss se vuelve “tight” y 
-%    al cambiar environment verás R*,H*,Tp* distintos.
+%    You will see that the path-loss constraint becomes “tight” and 
+%    changing the environment results in different optimal values.
 % ---------------------------------------------------------------------
 
-%% 1) Configuración
+%% 1) Configuration
 params = struct();
 
-% Covertura:
+% Coverage:
 params.Rc   = 56.13; 
-params.Hmin = 1;      % relaja -> 1 m
-params.Hmax = 3000;   % sube -> 3000 m
+params.Hmin = 1;      % relaxed -> 1 m
+params.Hmax = 3000;   % increased -> 3000 m
 
-% Velocidades y periodo
-params.vmax   = 30;   % subimos v_max
-params.vmin   = 5;    % ~0 => no limita
+% Velocities and period
+params.vmax   = 30;   % increased vmax
+params.vmin   = 5;    % ~0 => non-limiting
 params.Tp_max = 200;  
-params.Tp_min = 10;    % p.ej. 1 s
+params.Tp_min = 10;    % e.g., 10 s
 
-% Haz de antena => ancho ~85 deg => no limita
+% Antenna beamwidth => wide ~85 deg => non-limiting
 params.phi_deg=85; 
 params.phi_rad=deg2rad(params.phi_deg);
 
-% Modelo de propulsión (eq.(11)):
+% Propulsion model (eq.(11)):
 params.gamma1=504.6; params.gamma2=6.53e-5; params.gamma3=6.53e-3;
 params.gamma4=687.88; params.gamma5=90.20; params.g=9.81;
 
-% PATH-LOSS threshold => p.ej. 145 dB (aún más estricto que 155)
+% PATH-LOSS threshold => e.g., 145 dB (more strict than 155)
 PL_dB=145;  
 params.TH_PL = 10^(PL_dB/10); 
 params.delta = 2.5;
 params.Pser =0.8;
 
-% Selección del environment => "SU","UB","DU","HU"
+% Select environment => "SU","UB","DU","HU"
 environment= 'UB';  
 
-% Cargar: B_logistic, C_logistic, etaLoS_lin, etaNLoS_lin
+% Load: B_logistic, C_logistic, etaLoS_lin, etaNLoS_lin
 logEnv= getLogisticParams(environment);
 params.B_logistic   = logEnv.B_logistic;
 params.C_logistic   = logEnv.C_logistic;
 params.etaLoS_lin   = 10^(logEnv.etaLoS_dB /10);
 params.etaNLoS_lin  = 10^(logEnv.etaNLoS_dB/10);
 
-% eq.(10): freq
+% eq.(10): frequency
 f_c= 2.5e9; c_light=3e8;
 G0_lin= 2.9e4/( (2*params.phi_rad)^2 );
 params.K0= (1/G0_lin)* (4*pi*f_c/c_light)^params.delta;
@@ -76,13 +76,13 @@ params.IterMax=200;
 %% 2) A0,B0,c0 => eq.(25),(38a)
 [params.A0, params.B0, params.c0] = computeABC(params);
 
-fprintf('\n*** CORREMOS EN environment=%s, PATH-LOSS=%.1f dB\n',environment,PL_dB);
+fprintf('\n*** RUNNING with environment=%s, PATH-LOSS=%.1f dB\n',environment,PL_dB);
 
 %% 3) Solver
 [R_opt,H_opt,Tp_opt,E_opt,history] = solveUAVviaPrimalDual(params);
 
-%% 4) Resultados
-fprintf('\n=== RESULTADO ÓPTIMO ===\n');
+%% 4) Results
+fprintf('\n=== OPTIMAL RESULT ===\n');
 fprintf('R*    = %.3f m\n', R_opt);
 fprintf('H*    = %.3f m\n', H_opt);
 fprintf('T_p*  = %.3f s\n', Tp_opt);
@@ -92,15 +92,16 @@ fprintf('E*    = %.3f J\n', E_opt);
 
 figure;
 plot(1:params.IterMax,history.E,'o-','LineWidth',1.4);
-grid on; xlabel('Iter'); ylabel('E [J]');
+grid on; xlabel('Iteration'); ylabel('E [J]');
 title(sprintf('Energy evolution - env=%s, PL=%.1fdB',environment,PL_dB));
 
-% Revisar si la path-loss saturó => phi5 ~0 ?
+% Check if path-loss constraint was saturated => phi5 ~ 0 ?
 phiEval= evaluateConstraints(log([R_opt,H_opt,Tp_opt,0,0]),params);
-fprintf('\nConstraints phi_i= \n');
+fprintf('\nConstraint values phi_i= \n');
 disp(phiEval);
 
 end
+
 % -------------------------------------------------------------------------
 
 function envOut= getLogisticParams(envType)
@@ -126,7 +127,7 @@ switch upper(envType)
         envOut.etaLoS_dB    =2.3;
         envOut.etaNLoS_dB   =34;
     otherwise
-        error('Entorno desconocido. Usa: SU, UB, DU, HU');
+        error('Unknown Environment: SU, UB, DU, HU');
 end
 end
 
@@ -171,50 +172,51 @@ c0Val= 1+ (2*(par.vmax^2))/( par.gamma5*(zMin^2));
 end
 
 function tDeg = invertLogisticLoS(pser, Bval, Cval)
-% Calcula theta (en deg) tal que:
-%   PLoS(theta)= 1/(1 + C e^{-B (theta-C)})
-% => pser= PLoS(theta)
+% Computes theta (in degrees) such that:
+%   PLoS(theta)= 1 / (1 + C * exp(-B * (theta - C)))
+% => pser = PLoS(theta)
 %
-% Maneja casos pser<=0 o pser>=1 con valores 'por defecto'.
+% Handles edge cases when pser <= 0 or pser >= 1 using default values.
 
-    % Valor por defecto
+    % Default value
     tDeg = 90;
 
-    % 1) Manejo de extremos
-    if pser<=0
-        % si pser <=0 => la eq. no tiene mucho sentido => 
-        % definimos tDeg= 90 o 0 según convenga
-        tDeg= 90;
+    % 1) Handle lower and upper bounds
+    if pser <= 0
+        % if pser <= 0 => equation not meaningful =>
+        % we define tDeg = 90 or 0 depending on context
+        tDeg = 90;
         return;
     end
-    if pser>=1
-        % si pser>=1 => eq. => theta=??? => forzamos tDeg=0 => 
-        tDeg= 0;
+    if pser >= 1
+        % if pser >= 1 => theta undefined => force tDeg = 0
+        tDeg = 0;
         return;
     end
 
-    % 2) Calculamos lhs= (1/pser)-1 => si es <=0 => tDeg=0
+    % 2) Compute lhs = (1/pser) - 1 => if <= 0 => tDeg = 0
     lhs = (1/pser) - 1;
     if lhs <= 0
-        tDeg= 0;
+        tDeg = 0;
         return;
     end
 
-    % 3) Dividimos por Cval => si sale <=0 => tDeg=0
+    % 3) Divide by Cval => if <= 0 => tDeg = 0
     lhs2 = lhs / Cval;
     if lhs2 <= 0
-        tDeg= 0;
+        tDeg = 0;
         return;
     end
 
-    % 4) Valor nominal => eq. => 
-    th = Cval - (1/Bval)*log(lhs2);
+    % 4) Nominal value => compute theta
+    th = Cval - (1 / Bval) * log(lhs2);
 
-    % 5) Acotamos en [0,90]
-    th= max(0, th);
-    th= min(90, th);
-    tDeg= th;
+    % 5) Clamp in range [0, 90]
+    th = max(0, th);
+    th = min(90, th);
+    tDeg = th;
 end
+
 
 
 %% ========================================================================
@@ -358,14 +360,14 @@ xH= min(xH, log(P.Hmax));
 xT= max(xT, log(P.Tp_min));
 xT= min(xT, log(P.Tp_max));
 
-% 4) Forzar v>=v_min => (xR- xT)>= ln(vmin/(2*pi))
+% 4) Enforce v>=v_min => (xR- xT)>= ln(vmin/(2*pi))
 vMinDelta= log( P.vmin/(2*pi) );
 delta= xR- xT;
 if delta< vMinDelta
    xR= xT+ vMinDelta;
 end
 
-% 5) Forzar beamwidth => (R+Rc)<= H tan(phi)
+% 5) Enforce beamwidth  => (R+Rc)<= H tan(phi)
 Rcand= exp(xR);
 Hcand= exp(xH);
 beamMax= Hcand* tan(P.phi_rad)- P.Rc;
@@ -405,7 +407,7 @@ Efin= c1+ c2+ c3+ c4;
 end
 
 function phiVals= evaluateConstraints(xLog, P)
-% Devuelve un vector con las 8 phi_i en la solucion final
+% Returns a vector with the 8 constraint values (phi_i) for final solution
 xR= xLog(1); xH= xLog(2); xT= xLog(3);
 xY= xLog(4); xZ= xLog(5);
 

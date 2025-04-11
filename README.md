@@ -81,7 +81,7 @@ All controller scripts are located under: `sjtu_drone_control/sjtu_drone_control
 To run each controller, open a new terminal (with your ROS 2 environment sourced) and execute the corresponding `ros2 run` command.
 
 ### 1. Altitude Control
-**File**: `altitude_controller.py`
+**File**: [Altitude Control Node](sjtu_drone_control/sjtu_drone_control/altitude_controller.py)
 
 - **Basic Run**:
   ```bash
@@ -94,7 +94,7 @@ To run each controller, open a new terminal (with your ROS 2 environment sourced
   This node keeps the drone at a desired altitude.
 
 ### 2. 3D Target PID Navigation
-**File**: `point_to_achieve_v1.py`
+**File**: [Target PID Navigation Node](sjtu_drone_control/sjtu_drone_control/point_to_achieve_v1.py}
 
 - **Basic Run**:
   ```bash
@@ -108,7 +108,7 @@ To run each controller, open a new terminal (with your ROS 2 environment sourced
   This node guides the drone to a specified 3D target position.
 
 ### 3. Circular Trajectory PID
-**File**: `circular_trajectory_PID_v2.py`
+**File**: [Circular Trajectory PID Control Node](sjtu_drone_control/sjtu_drone_control/circular_trajectory_PID_v2.py)
 
 - **Basic Run**:
   ```bash
@@ -124,7 +124,7 @@ To run each controller, open a new terminal (with your ROS 2 environment sourced
   This node tracks a circular path using a two-phase approach.
 
 ### 4. Polygonal Waypoint Navigation
-**File**: `points_to_achieve_v1.py`
+**File**: [Polygonal Waypoint Navigation Node](sjtu_drone_control/sjtu_drone_control/points_to_achieve_v1.py)
 
 - **Basic Run**:
   ```bash
@@ -137,7 +137,7 @@ To run each controller, open a new terminal (with your ROS 2 environment sourced
   This node follows a list of waypoints forming a polygon (3 to 7 vertices).
 
 ### 5. Smooth Polygonal Navigation
-**File**: `points_to_achieve_v3_smooth.py`
+**File**: [Smooth Polygonal Navigation Node](sjtu_drone_control/sjtu_drone_control/points_to_achieve_v3_smooth.py)
 
 - **Basic Run**:
   ```bash

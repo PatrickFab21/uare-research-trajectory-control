@@ -32,7 +32,7 @@ The goal of this project is to simulate, control, and evaluate various UAV traje
 
 ```bash
 cd ~/ros2_ws/src
-git clone https://github.com/YOUR_USERNAME/uare-research-trajectory-control.git
+git clone https://github.com/PatrickFab21/uare-research-trajectory-control.git
 ```
 
 2. Clone the required base simulator:

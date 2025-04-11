@@ -94,7 +94,7 @@ To run each controller, open a new terminal (with your ROS 2 environment sourced
   This node keeps the drone at a desired altitude.
 
 ### 2. 3D Target PID Navigation
-**File**: [Target PID Navigation Node](sjtu_drone_control/sjtu_drone_control/point_to_achieve_v1.py}
+**File**: [Target PID Navigation Node](sjtu_drone_control/sjtu_drone_control/point_to_achieve_v1.py)
 
 - **Basic Run**:
   ```bash

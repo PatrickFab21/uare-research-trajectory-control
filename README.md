@@ -57,46 +57,82 @@ source install/setup.bash
 To launch the simulation with your custom controller:
 
 ```bash
-ros2 launch uare_research_trajectory_control drone_control.launch.py
+ros2 launch sjtu_drone_bringup sjtu_drone_bringup.launch.py
 ```
 
-Takeoff:
-
+### Takeoff:
 ```bash
-ros2 topic pub /drone/takeoff std_msgs/msg/Empty '{}' --once
+ros2 topic pub /simple_drone/takeoff std_msgs/msg/Empty '{}' --once
 ```
 
-Land:
-
+### Land:
 ```bash
-ros2 topic pub /drone/land std_msgs/msg/Empty '{}' --once
+ros2 topic pub /simple_drone/land std_msgs/msg/Empty '{}' --once
 ```
 
 ---
 
 ## 📊 Implemented Controllers
 
-### Altitude Control
+All control nodes are located in the folder: `sjtu_drone_control/sjtu_drone_control/`
 
-A dedicated node (`altitude_controller.py`) uses a PID loop to maintain a target altitude, configurable in real time using the ROS 2 parameter `target_altitude`.
+### `altitude_controller.py` — Altitude Control
+This node controls the drone's vertical position using a PID controller.
 
-### Point-To-Target PID Navigation
+- 📍 Path: `sjtu_drone_control/sjtu_drone_control/altitude_controller.py`
+- 📐 Parameters:
+  - `target_altitude` (float, default: 10.0): desired flight altitude in meters.
+- 🧠 It regulates vertical velocity `v_z` to reach and maintain `target_altitude`.
 
-The `point_to_achieve_v1.py` node allows 3D navigation to any specified target using PID on yaw, altitude, and forward velocity. It adjusts orientation first, then advances while maintaining stability.
+---
 
-### Circular Trajectory Tracking
+### `point_to_achieve_v1.py` — 3D Target PID Navigation
+This node moves the UAV to a specific 3D target position using PID control over yaw, altitude, and distance.
 
-The `circular_trajectory_PID_v2.py` node implements a two-phase controller: approach to the circle and circular movement using dynamic angular updates, with real-time odometry.
+- 📍 Path: `sjtu_drone_control/sjtu_drone_control/point_to_achieve_v1.py`
+- 📐 Parameters:
+  - Target position: `x`, `y`, `z`
+  - PID gains: `k_yaw`, `k_dist`, `k_z`
+  - Max velocities: `v_max`, `w_max`
+  - Tolerances: `epsilon_yaw`, `epsilon_dist`
+- 🧠 It aligns yaw before advancing, using real-time odometry from `/simple_drone/odom`.
 
-### Polygonal Trajectory Navigation
+---
 
-`points_to_achieve_v1`
+### `circular_trajectory_PID_v2.py` — Circular Trajectory Tracking
+Tracks a circular path by transitioning between approach and follow phases using PD control.
 
-The `.py` node performs sequential waypoint tracking across a polygon (triangle, square, pentagon, etc.) using simple proportional control for yaw, altitude, and velocity.
+- 📍 Path: `sjtu_drone_control/sjtu_drone_control/circular_trajectory_PID_v2.py`
+- 📐 Parameters:
+  - Circle center: `X_C`, `Y_C`
+  - Radius `R`, altitude `Z_D`
+  - Gains: `K_p_xy`, `K_d_xy`, `K_p_z`, `K_d_z`
+  - Tolerances: `epsilon_approach`, `epsilon_z`
+- 🧠 After reaching the circle perimeter, the drone transitions to smooth angular motion along the path.
 
-### Smooth Polygonal Navigation
+---
 
-The `points_to_achieve_v3_smooth.py` node adds smoothed transitions between polygon corners using a radius-based switching mechanism to avoid sharp turns and ensure continuous movement.
+### `points_to_achieve_v1.py` — Polygonal Waypoint Navigation
+Controls the UAV along a polygon (triangle, square, etc.) using sequential waypoint tracking.
+
+- 📍 Path: `sjtu_drone_control/sjtu_drone_control/points_to_achieve_v1.py`
+- 📐 Parameters:
+  - `num_vertices` (int)
+  - Gains: `k_psi`, `k_d`, `k_z`
+  - Max velocities and waypoint threshold
+- 🧠 Switches to the next waypoint once the UAV reaches the current target.
+
+---
+
+### `points_to_achieve_v3_smooth.py` — Smooth Polygonal Navigation
+Enhances polygonal navigation with smoothed corner transitions using a radius-based switch.
+
+- 📍 Path: `sjtu_drone_control/sjtu_drone_control/points_to_achieve_v3_smooth.py`
+- 📐 Parameters:
+  - `num_vertices`, `corner_radius`
+  - Gains: `k_psi`, `k_d`, `k_z`
+  - Velocity and angular rate limits
+- 🧠 Preemptively switches to the next waypoint within a corner radius for smooth motion.
 
 ---
 

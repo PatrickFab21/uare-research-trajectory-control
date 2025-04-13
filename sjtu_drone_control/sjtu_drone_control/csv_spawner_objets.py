@@ -17,50 +17,50 @@ class CSVSpawner(Node):
         
         self.spawn_service = self.create_client(SpawnEntity, '/spawn_entity')
 
-        self.get_logger().info(f'Esperando servicio /spawn_entity...')
+        self.get_logger().info(f'Waiting for /spawn_entity service...')
         self.spawn_service.wait_for_service()
-        self.get_logger().info(f'Servicio disponible. Spawneando objetos desde {self.csv_file} con modelo "{self.model_name}"...')
+        self.get_logger().info(f'Service available. Spawning objects from {self.csv_file} using model "{self.model_name}"...')
         
         self.spawn_objects_from_csv()
 
-        self.get_logger().info("Todos los objetos han sido spawneados. Cerrando nodo...")
+        self.get_logger().info("All objects have been spawned. Shutting down node...")
         rclpy.shutdown()
 
     def spawn_objects_from_csv(self):
-        """ Lee el archivo CSV y spawnea los objetos en Gazebo """
+        """Reads the CSV file and spawns objects in Gazebo"""
         if not os.path.exists(self.csv_file):
-            self.get_logger().error(f'Archivo {self.csv_file} no encontrado!')
+            self.get_logger().error(f'File {self.csv_file} not found!')
             return
         
         with open(self.csv_file, 'r') as file:
             reader = csv.reader(file)
-            header = next(reader)  # Leer el encabezado
+            header = next(reader)
 
             if header[:3] != ["Point", "X", "Y"]:
-                self.get_logger().error(f'Formato de CSV incorrecto. Se esperaba: Point, X, Y')
+                self.get_logger().error(f'Invalid CSV format. Expected: Point, X, Y')
                 return
             
-            object_count = 0  # Contador de objetos spawneados
+            object_count = 0
             for row in reader:
                 try:
                     obj_name, x, y = row
                     x, y = float(x), float(y)
                     
-                    self.get_logger().info(f'Intentando spawnear: {obj_name} en ({x}, {y})')  # 🔍 VERIFICACIÓN
+                    self.get_logger().info(f'Attempting to spawn: {obj_name} at ({x}, {y})')
                     
-                    self.spawn_object(obj_name, x, y)  
+                    self.spawn_object(obj_name, x, y)
                     object_count += 1
-                    #time.sleep(0.1)  # Esperar para evitar sobrecarga en Gazebo
+                    # time.sleep(0.1)
                     
                 except ValueError:
-                    self.get_logger().error(f'Error procesando fila: {row}')
+                    self.get_logger().error(f'Error processing row: {row}')
 
-            self.get_logger().info(f'Se intentaron spawnear {object_count} objetos.')  # 🔍 VERIFICACIÓN FINAL
+            self.get_logger().info(f'Tried to spawn {object_count} objects.')
 
     def spawn_object(self, name, x, y):
-        """ Spawnea un modelo específico en Gazebo en la posición X, Y """
+        """Spawns a specific model in Gazebo at position X, Y"""
         request = SpawnEntity.Request()
-        request.name = name  
+        request.name = name
         request.xml = f"""<sdf version='1.6'>
                             <include>
                                 <uri>model://{self.model_name}</uri>
@@ -69,15 +69,15 @@ class CSVSpawner(Node):
         request.initial_pose = Pose()
         request.initial_pose.position.x = x
         request.initial_pose.position.y = y
-        request.initial_pose.position.z = 0.5  
+        request.initial_pose.position.z = 0.5
 
         future = self.spawn_service.call_async(request)
-        rclpy.spin_until_future_complete(self, future)  # 🔥 Esperar a que termine el spawn
-        
+        rclpy.spin_until_future_complete(self, future)
+
         if future.result() is None:
-            self.get_logger().error(f'❌ Error al spawnear {name}')
+            self.get_logger().error(f'Failed to spawn {name}')
         else:
-            self.get_logger().info(f'✅ Spawned {name} at ({x}, {y})')
+            self.get_logger().info(f'Successfully spawned {name} at ({x}, {y})')
 
 
 def main(args=None):
